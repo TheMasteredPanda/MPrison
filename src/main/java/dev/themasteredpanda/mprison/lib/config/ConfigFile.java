@@ -3,7 +3,9 @@ package dev.themasteredpanda.mprison.lib.config;
 import com.google.common.collect.Sets;
 import dev.themasteredpanda.mprison.lib.util.Format;
 import dev.themasteredpanda.mprison.lib.util.NumberUtil;
+import lombok.Getter;
 import lombok.SneakyThrows;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -19,6 +21,7 @@ public class ConfigFile
     private JavaPlugin instance;
     private String name;
     private File file;
+    @Getter
     private Configuration config;
     private Class<? extends ConfigurationProvider> provider;
 
@@ -55,14 +58,21 @@ public class ConfigFile
     @SneakyThrows
     public void populate(Object instance)
     {
-        for (Field f : instance.getClass().getDeclaredFields()) {
+        Bukkit.getLogger().info("Attempting to populate instance " + instance.getClass());
+        for (Field f : instance.getClass().getFields()) {
             if (!f.isAnnotationPresent(ConfigPopulate.class)) {
                 continue;
             }
 
+            Bukkit.getLogger().info("Field " + f.getName() + " has ConfigPopulate annotation.");
             ConfigPopulate annotation = f.getAnnotation(ConfigPopulate.class);
 
             Object value = this.config.get(annotation.value());
+
+            if (value == null) {
+                Bukkit.getLogger().severe("Couldn't find value in config " + name + " at " + annotation.value());
+                continue;
+            }
 
             if (value instanceof String) {
                 if (annotation.format()) {

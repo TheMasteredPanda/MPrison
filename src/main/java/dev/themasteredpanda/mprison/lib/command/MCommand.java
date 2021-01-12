@@ -1,10 +1,11 @@
 package dev.themasteredpanda.mprison.lib.command;
 import com.google.common.collect.Lists;
+import dev.themasteredpanda.mprison.lib.config.ConfigFile;
 import dev.themasteredpanda.mprison.lib.config.ConfigPopulate;
 import dev.themasteredpanda.mprison.lib.exception.DeveloperException;
 import dev.themasteredpanda.mprison.lib.util.Format;
-import dev.themasteredpanda.mprison.lib.util.GenericUtil;
 import dev.themasteredpanda.mprison.lib.util.ReflectionUtil;
+import dev.themasteredpanda.mprison.lib.util.Sender;
 import net.md_5.bungee.api.chat.*;
 import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.Bukkit;
@@ -25,9 +26,8 @@ import java.util.Locale;
  * preset in every command, in addition to handling child and parent commands, arguments, argu-
  * ment types, and
  * @param <P>
- * @param <S>
  */
-public class MCommand<P extends JavaPlugin, S extends CommandSender> extends Command
+public class MCommand<P extends JavaPlugin> extends Command
 {
     protected P instance;
     private LinkedList<MCommand> children = Lists.newLinkedList();
@@ -71,11 +71,12 @@ public class MCommand<P extends JavaPlugin, S extends CommandSender> extends Com
     @ConfigPopulate("locale.command_help.format")
     public List<String> COMMAND_HELP_FORMAT;
 
-    public MCommand(P instance, String description, String permission, boolean playerOnlyCommand, String... aliases)
+    public MCommand(P instance, ConfigFile locale, String description, String permission, boolean playerOnlyCommand, String... aliases)
     {
         super(aliases[0], description, permission, Arrays.asList(aliases));
         this.instance = instance;
         this.playerOnlyCommand = playerOnlyCommand;
+        locale.populate(this);
     }
 
     /**
@@ -146,7 +147,7 @@ public class MCommand<P extends JavaPlugin, S extends CommandSender> extends Com
      */
     public boolean hasPermission(CommandSender sender)
     {
-        return this.getPermission() != null && sender.hasPermission(this.getPermission());
+        return sender.isOp() || (this.getPermission() != null && sender.hasPermission(this.getPermission()));
     }
 
     /**
@@ -224,42 +225,52 @@ public class MCommand<P extends JavaPlugin, S extends CommandSender> extends Com
     @Override
     public boolean execute(CommandSender sender, String label, String[] args)
     {
+        Bukkit.getLogger().info("Executed command " + label);
         if (!(sender instanceof Player) && this.playerOnlyCommand) {
             sender.sendMessage(PLAYER_ONLY_COMMAND);
             return false;
         }
 
-        if (args.length >= 1) {
+        LinkedList<String> stringArguments = Lists.newLinkedList(Arrays.asList(args));
+
+        if (stringArguments.size() >= 1) {
             if (args[0].equalsIgnoreCase("help")) {
                 LinkedList<BaseComponent[]> messages = Lists.newLinkedList();
 
                 for (String line : COMMAND_HELP_FORMAT) {
-                    if (line.contains("{children}")) {
+                    if (line.contains("{command_children}")) {
+                        if (this.children.size() == 0) {
+                            continue;
+                        }
+
                         LinkedList<BaseComponent[]> childCommands = Lists.newLinkedList();
                         childCommands.add(TextComponent.fromLegacyText(Format.colour(COMMAND_HELP_CHILDREN_HEADER)));
                         ComponentBuilder builder = new ComponentBuilder();
 
                         for (MCommand child : this.children) {
-                            builder.append(Format.format(COMMAND_HELP_CHILD_ENTRY, "{command_name};" + child.getName())).event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Execute command"))).event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, getCommandPath() + " help"));
+                            builder.append(Format.format(COMMAND_HELP_CHILD_ENTRY, "{command_name};" + child.getName())).event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Execute command"))).event(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/" + child.getCommandPath() + " help"));
                             childCommands.add(builder.create());
                         }
 
                         messages.addAll(childCommands);
+                        continue;
                     }
 
                     messages.add(TextComponent.fromLegacyText(Format.format(line, "{header};" + COMMAND_HELP_HEADER, "{footer};" + COMMAND_HELP_FOOTER,
                             "{command_description};" + Format.format(COMMAND_HELP_DESCRIPTION, "{description};" + getDescription()),
-                            "{command_permission};" + Format.format(COMMAND_HELP_COMMAND_PERMISSION, "{command_has_permission};" + (hasPermission(sender) ? "yes": "no")), "{command_usage};" + Format.format(COMMAND_HELP_USAGE, "{command};" + getCommandUsage()))));
+                            "{command_permission};" + Format.format(COMMAND_HELP_COMMAND_PERMISSION, "{command_has_permission};" + (hasPermission(sender) ? "yes": "no")),
+                            "{command_usage};" + Format.format(COMMAND_HELP_USAGE, "{command};" + getCommandUsage()))));
                 }
+
+                Sender.send(sender, messages);
                 return true;
             }
 
-            LinkedList<String> stringArguments = Lists.newLinkedList(Arrays.asList(args));
 
             for (MCommand child : this.children) {
                 if (child.getAliases().contains(args[0].toLowerCase(Locale.ROOT))) {
                     stringArguments.removeFirst();
-                    execute(sender, label, stringArguments.toArray(new String[0]));
+                    child.execute(sender, label, stringArguments.toArray(new String[0]));
                     return true;
                 }
             }
@@ -285,10 +296,11 @@ public class MCommand<P extends JavaPlugin, S extends CommandSender> extends Com
                }
             }
 
-            execute(GenericUtil.cast(sender), stringArguments);
         }
+
+        execute(sender, stringArguments);
         return true;
     }
 
-    public void execute(S sender, LinkedList<String> arguments) { }
+    public void execute(CommandSender sender, LinkedList<String> arguments) { }
 }
