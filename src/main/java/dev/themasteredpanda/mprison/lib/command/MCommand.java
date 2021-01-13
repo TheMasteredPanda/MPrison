@@ -295,7 +295,6 @@ public class MCommand<P extends JavaPlugin> extends Command
                   return false;
                }
             }
-
         }
 
         execute(sender, stringArguments);
