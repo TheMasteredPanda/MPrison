@@ -108,7 +108,7 @@ public class InsertStatement implements Statement<Void>
     @Override
     public Optional<Void> get()
     {
-        return Try.wrap(() -> future.get());
+        return Try.wrap(() -> Optional.of(future.get()));
     }
 
     @Override
@@ -160,14 +160,13 @@ public class InsertStatement implements Statement<Void>
             @Override
             public void onSuccess(@Nullable Boolean aBoolean)
             {
-                successConsumer.accept(null);
-
+               if (successConsumer != null) successConsumer.accept(null);
             }
 
             @Override
             public void onFailure(Throwable throwable)
             {
-                failureConsumer.accept(throwable);
+                if (failureConsumer != null) failureConsumer.accept(throwable);
             }
         });
 

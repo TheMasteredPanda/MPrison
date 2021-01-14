@@ -35,7 +35,12 @@ public class FetchStatement<V> implements Statement<V>
     private Model model;
     private boolean executed = false;
 
-    public class Builder implements Statement.Builder<FetchStatement, Builder>
+    public static Builder builder(Database database)
+    {
+        return new Builder(database);
+    }
+    
+    public static class Builder implements Statement.Builder<FetchStatement, Builder>
     {
         private String tableName;
         private LinkedList<String> columns = Lists.newLinkedList();
@@ -43,7 +48,7 @@ public class FetchStatement<V> implements Statement<V>
         private Database database;
         private int selectLimit = -0;
 
-        public Builder(Database database)
+        private Builder(Database database)
         {
             this.database = database;
         }
@@ -127,7 +132,7 @@ public class FetchStatement<V> implements Statement<V>
 
                     return Optional.of(entries);
                 } else {
-                    return model.serialize(set);
+                    return Optional.of(model.serialize(set));
                 }
             });
         }
@@ -178,25 +183,33 @@ public class FetchStatement<V> implements Statement<V>
             @Override
             public void onSuccess(@Nullable ResultSet resultSet)
             {
-                if (SQLUtil.count(resultSet) > 0) {
-                    List<Model> entries = Lists.newLinkedList();
+                if (successConsumer == null) return;
 
-                    Try.wrap(() -> {
-                        while (Objects.requireNonNull(resultSet).next()) {
-                            entries.add(model.serialize(resultSet));
-                        }
+                if (model == null) {
+                   if (SQLUtil.count(resultSet) > 0) {
+                       List<Model> entries = Lists.newLinkedList();
 
-                        return null;
-                    });
+                       Try.wrap(() -> {
+                           while (Objects.requireNonNull(resultSet).next()) {
+                               entries.add(model.serialize(resultSet));
+                           }
 
-                    successConsumer.accept(GenericUtil.cast(entries));
+                           return null;
+                       });
+
+                       successConsumer.accept(GenericUtil.cast(entries));
+                   } else {
+                       successConsumer.accept(GenericUtil.cast(model.serialize(resultSet)));
+                   }
+                } else {
+                   successConsumer.accept(GenericUtil.cast(resultSet));
                 }
             }
 
             @Override
             public void onFailure(Throwable throwable)
             {
-                failureConsumer.accept(throwable);
+                if (failureConsumer != null) failureConsumer.accept(throwable);
             }
         });
         return null;
