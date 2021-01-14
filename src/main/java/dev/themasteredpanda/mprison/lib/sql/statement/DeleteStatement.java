@@ -21,6 +21,9 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+/**
+ * Builder for delete statements.
+ */
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class DeleteStatement implements Statement<Void>
 {
@@ -30,7 +33,14 @@ public class DeleteStatement implements Statement<Void>
     private Consumer<Void> successConsumer = null;
     private Consumer<Throwable> failureConsumer = null;
     private ListenableFuture<Void> future;
+    private boolean executed = false;
 
+    /**
+     * Creates a builder instance for this statement.
+     *
+     * @param database - The Database instance that will be used to execute the built statement.
+     * @return builder instance.
+     */
     public static Builder builder(Database database)
     {
         return new Builder(database);
@@ -47,6 +57,10 @@ public class DeleteStatement implements Statement<Void>
             this.database = database;
         }
 
+        /**
+         * Set the table name.
+         * @param tableName - the name of the table to set.
+         */
         @Override
         public Builder name(String tableName)
         {
@@ -54,12 +68,22 @@ public class DeleteStatement implements Statement<Void>
             return this;
         }
 
+        /**
+         * No implemented into this statement.
+         */
         @Override
         public Builder columns(String... columnNames)
         {
             throw new NotImplementedException();
         }
 
+        /**
+         * Add where conditions to the hashmap. Theres make up the section
+         * after the WHERE word in the statement.
+         *
+         * @param columnName - The name of the column.
+         * @param value - The value to use in the condition.
+         */
         public Builder where(String columnName, Object value)
         {
             if (conditions.containsKey(columnName)) return this;
@@ -73,6 +97,7 @@ public class DeleteStatement implements Statement<Void>
             return new DeleteStatement(tableName, conditions, database);
         }
     }
+
 
     @Override
     public Statement<Void> success(Consumer<Void> consumer)
@@ -88,21 +113,31 @@ public class DeleteStatement implements Statement<Void>
         return this;
     }
 
+
     @Override
     public Optional<Void> get()
     {
         return Try.wrap(() -> Optional.of(future.get()));
     }
 
+    /**
+     * No implemented into this statement.
+     */
     @Override
     public Statement<Void> serialize(Model model)
     {
         throw new NotImplementedException();
     }
 
+    /**
+     * Executes the statement.
+     *
+     * @throws SQLAlreadyExecutedException if the statement has already been executed.
+     */
     @Override
     public Statement<Void> execute() throws SQLAlreadyExecutedException
     {
+        if (executed) throw new SQLAlreadyExecutedException();
         this.future = database.getService().submit(() -> {
             StringBuilder sb = new StringBuilder("DELETE FROM '").append(tableName).append("' WHERE ").append(Joiner.on(" AND ").join(conditions.entrySet().stream().map(entry -> entry.getKey() + " = " + entry.getValue().toString()).collect(Collectors.toList()))).append(";");
 
@@ -113,7 +148,7 @@ public class DeleteStatement implements Statement<Void>
             }
         });
 
-        Futures.addCallback(future, new FutureCallback<Void>()
+        Futures.addCallback(future, new FutureCallback<>()
         {
             @Override
             public void onSuccess(@Nullable Void unused)

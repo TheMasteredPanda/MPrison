@@ -24,6 +24,9 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Statement builder for INSERT statements.
+ */
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class InsertStatement implements Statement<Void>
 {
@@ -69,6 +72,11 @@ public class InsertStatement implements Statement<Void>
             return this;
         }
 
+        /**
+         * The values to insert.
+         *
+         * @param values - Array of values.
+         */
         public Builder values(Object... values)
         {
             Collections.addAll(this.values, values);

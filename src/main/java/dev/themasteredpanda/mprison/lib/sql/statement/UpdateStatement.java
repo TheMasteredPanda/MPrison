@@ -21,6 +21,9 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+/**
+ * Statement builder for UPDATE statements.
+ */
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class UpdateStatement implements Statement<Void>
 {
@@ -62,13 +65,25 @@ public class UpdateStatement implements Statement<Void>
             throw new NotImplementedException();
         }
 
-        public Builder set(String column, Object value)
+        /**
+         * Add values to update.
+         *
+         * @param column - Column name.
+         * @param value - New value.
+         */
+        public Builder update(String column, Object value)
         {
             if (pairs.containsKey(column)) return this;
             pairs.put(column, value);
             return this;
         }
 
+        /**
+         * Add conditions to which row to update.
+         *
+         * @param column - Column name.
+         * @param value - Value.
+         */
         public Builder where(String column, Object value)
         {
             if (conditions.containsKey(column)) return this;

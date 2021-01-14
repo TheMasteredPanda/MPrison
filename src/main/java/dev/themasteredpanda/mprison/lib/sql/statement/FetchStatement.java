@@ -22,6 +22,10 @@ import java.sql.ResultSet;
 import java.util.*;
 import java.util.function.Consumer;
 
+/**
+ * Builder for select statements.
+ * @param <V>
+ */
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class FetchStatement<V> implements Statement<V>
 {
@@ -35,11 +39,15 @@ public class FetchStatement<V> implements Statement<V>
     private Model model;
     private boolean executed = false;
 
+    /**
+     * Creates a new builder instance for this statement.
+     * @param database - Database instance used to execute the built statement.
+     */
     public static Builder builder(Database database)
     {
         return new Builder(database);
     }
-    
+
     public static class Builder implements Statement.Builder<FetchStatement, Builder>
     {
         private String tableName;
@@ -53,6 +61,11 @@ public class FetchStatement<V> implements Statement<V>
             this.database = database;
         }
 
+        /**
+         * The name of the table this statement will execute on.
+         *
+         * @param tableName - The name of the table.
+         */
         @Override
         public Builder name(String tableName)
         {
@@ -60,6 +73,11 @@ public class FetchStatement<V> implements Statement<V>
             return this;
         }
 
+        /**
+         * The columns to fetch from the table.
+         *
+         * @param columnNames - The column names.
+         */
         @Override
         public Builder columns(String... columnNames)
         {
@@ -67,6 +85,13 @@ public class FetchStatement<V> implements Statement<V>
             return null;
         }
 
+        /**
+         * The conditions that the statement requires to isolate specific
+         * rows to fetch. If this isn't specified it will default to '*'.
+         *
+         * @param columnName - The name of the column
+         * @param value - The value.
+         */
         public Builder where(String columnName, Object value)
         {
             if (this.conditions.containsKey(columnName)) {
@@ -77,12 +102,23 @@ public class FetchStatement<V> implements Statement<V>
             return this;
         }
 
+        /**
+         * The amount of rows to fetch. If this is not specified it will fall
+         * back to whatever the limit is on the sql server.
+         *
+         * @param limit - Number of rows to fetch.
+         */
         public Builder limit(int limit)
         {
             this.selectLimit = limit;
             return this;
         }
 
+        /**
+         * Builds the statement by passing the values to the outer class.
+         *
+         * @return
+         */
         @Override
         public FetchStatement build()
         {
@@ -93,6 +129,7 @@ public class FetchStatement<V> implements Statement<V>
             return new FetchStatement(tableName, columns, conditions, database);
         }
     }
+
 
     @Override
     public Statement<V> success(Consumer<V> consumer)
