@@ -11,6 +11,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.Collection;
 import java.util.concurrent.Executors;
 
+/**
+ * A class holding the connection and thread pool used to
+ * execute threads executing sql statements on the hikari
+ * client.
+ */
 @Getter
 public class Database
 {

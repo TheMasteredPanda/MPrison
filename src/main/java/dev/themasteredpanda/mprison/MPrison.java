@@ -5,6 +5,7 @@ import dev.themasteredpanda.mprison.lib.command.MCommand;
 import dev.themasteredpanda.mprison.lib.config.ConfigFile;
 import dev.themasteredpanda.mprison.lib.config.YamlConfiguration;
 import dev.themasteredpanda.mprison.lib.util.Format;
+import dev.themasteredpanda.mprison.prison.PrisonManager;
 import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -14,6 +15,8 @@ public class MPrison extends JavaPlugin
     private ConfigFile locale;
     @Getter
     private ConfigFile mainConfig;
+    @Getter
+    private PrisonManager prisonManager;
 
     @Override
     public void onLoad()
@@ -28,6 +31,7 @@ public class MPrison extends JavaPlugin
     @Override
     public void onEnable()
     {
+        prisonManager = new PrisonManager(this);
         MCommand.register(new MPrisonCommand(this));
     }
 }
